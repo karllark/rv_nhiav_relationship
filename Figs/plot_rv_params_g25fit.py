@@ -238,8 +238,8 @@ def plot_resid(ax, data, dindx, model, color):
     fitx = 1.0 / data[1][gvals].value
     ax.plot(
         data[1][gvals],
-        # (data[dindx][gvals] - model(fitx)) / model(fitx),
-        data[dindx][gvals] - model(fitx),
+        (data[dindx][gvals] - model(fitx)) /data[dindx + 2][gvals],
+        # data[dindx][gvals] - model(fitx),
         linestyle="dotted",
         color=color,
         alpha=0.75,
@@ -472,6 +472,8 @@ if __name__ == "__main__":
     datasets = [alliue_res, gor09_res1, fit19_res, dec22_res1, dec22_res2, gor21_res]
     colors = [aiue_color, gor09_color, fit19_color, dec22_color, dec22_color, gor21_color]
     g25mod = G25()
+    #g25mod.FIR_amp = 0.0
+    #g25mod.FIR_amp.fixed = True
     fitted_models = plot_wavereg(
         ax,
         [g25mod, g25mod],
@@ -488,13 +490,14 @@ if __name__ == "__main__":
     # plot components
     comps = copy.deepcopy(fitted_models[0])
     modx = np.logspace(np.log10(0.001), np.log10(1000.0), 1000) * u.micron
-    amps = ["BKG", "FUV", "bump", "iss1", "iss2", "iss3", "sil1", "sil2", "FIR"]
+    ax[0].plot(modx, comps(modx), "k-", alpha=0.75)
+
+    amps = ["bkg", "fuv", "bump", "iss1", "iss2", "iss3", "sil1", "sil2", "fir"]
     for camp in amps:
-        print(camp)
         setattr(comps, f"{camp}_amp", 0.0)
     for camp in amps:
         setattr(comps, f"{camp}_amp", getattr(fitted_models[0], f"{camp}_amp"))
-        ax[0].plot(modx, comps(modx), "k-", alpha=0.5)
+        ax[0].plot(modx, comps(modx), "k--", alpha=0.5)
         setattr(comps, f"{camp}_amp", 0.0)
 
     leg_loc = "upper center"
@@ -550,11 +553,7 @@ if __name__ == "__main__":
         30.0,
     ]
 
-    ax[1].set_ylim(-0.1, 0.1)
-    if show_rv:
-        ax[3].set_ylim(-5.0, 5.0)
-
-    ax[1].set_ylim(-0.05, 0.05)
+    ax[1].set_ylim(-10, 10)
     if show_rv:
         ax[3].set_ylim(-1.0, 1.0)
 
@@ -584,7 +583,7 @@ if __name__ == "__main__":
     ax[0].set_yscale(yrange_a_type)
     ax[0].set_ylim(yrange_a)
     ax[0].set_ylabel("intercept (a)")
-    ax[1].set_ylabel("a - fit")
+    ax[1].set_ylabel("(a - fit)/a(unc)")
 
     nplts = 2
     if show_rv:

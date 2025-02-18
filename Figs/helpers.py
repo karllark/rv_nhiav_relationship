@@ -10,7 +10,6 @@ from astropy.modeling import Fittable1DModel, Parameter
 from dust_extinction.baseclasses import BaseExtModel
 from dust_extinction.shapes import _modified_drude
 
-
 x_range_G22 = [1.0 / 45.0, 1.0 / 0.08]
 
 
@@ -190,25 +189,36 @@ class G25(BaseExtModel, Fittable1DModel):
     n_inputs = 1
     n_outputs = 1
 
-    # constant for conversion from Ax/Ab to (more standard) Ax/Av
-    AbAv = 1.0 / 3.08 + 1.0
-
-    BKG_amp = Parameter(
-        description="BKG term: amplitude", default=165.0 * AbAv, min=0.0
+    bkg_amp = Parameter(
+        description="bkg: amplitude", default=2.5, bounds=(0.0, 10.0)
     )
-    BKG_lambda = Parameter(description="BKG term: center wavelength", default=0.047)
-    BKG_b = Parameter(description="BKG term: b coefficient", default=90.0)
-    BKG_n = Parameter(description="BKG term: n coefficient", default=2.0, fixed=True)
-
-    FUV_amp = Parameter(description="FUV term: amplitude", default=14.0 * AbAv, min=0.0)
-    FUV_lambda = Parameter(
-        description="FUV term: center wavelength", default=0.07, bounds=(0.06, 0.08)
+    bkg_center = Parameter(
+        description="bkg: center", default=0.047, bounds=(0.03, 0.07), fixed=True
     )
-    FUV_b = Parameter(description="FUV term: b coefficient", default=4.0)
-    FUV_n = Parameter(description="FUV term: n coefficient", default=6.5)
+    bkg_fwhm = Parameter(description="bkg: fwhm", default=0.433, fixed=False)
 
-    bump_amp = Parameter(description="bump: amplitude", default=3.23, bounds=(-1.0, 6.0))
-    bump_center = Parameter(description="bump: centroid", default=4.59, bounds=(4.5, 4.9))
+    fuv_amp = Parameter(
+       description="fuv: amplitude", default=3.5, bounds=(0.0, 10.0), fixed=False
+    )
+    fuv_center = Parameter(description="fuv: center", default=0.075, fixed=False)
+    fuv_fwhm = Parameter(description="fuv: fwhm", default=0.015, fixed=False)
+
+    #FUV_amp = Parameter(description="FUV term: amplitude", default=14.0 * AbAv, min=0.0)
+    #FUV_lambda = Parameter(
+    #    description="FUV term: center wavelength",
+    #    default=0.075,
+    #    bounds=(0.06, 0.10),
+    #    fixed=True,
+    #)
+    #FUV_b = Parameter(description="FUV term: b coefficient", default=4.0)
+    #FUV_n = Parameter(description="FUV term: n coefficient", default=6.5)
+
+    bump_amp = Parameter(
+        description="bump: amplitude", default=3.23, bounds=(-1.0, 6.0)
+    )
+    bump_center = Parameter(
+        description="bump: centroid", default=4.59, bounds=(4.5, 4.9)
+    )
     bump_fwhm = Parameter(description="bump: width", default=0.95, bounds=(0.6, 1.7))
 
     iss1_amp = Parameter(
@@ -228,7 +238,7 @@ class G25(BaseExtModel, Fittable1DModel):
     )
     iss3_center = Parameter(description="ISS3: center", default=1.587, fixed=True)
     iss3_fwhm = Parameter(description="ISS3: fwhm", default=0.243, fixed=True)
-    
+
     sil1_amp = Parameter(
         description="silicate 10um: amplitude", default=0.067, bounds=(0.001, 0.3)
     )
@@ -236,11 +246,12 @@ class G25(BaseExtModel, Fittable1DModel):
         description="silicate 10um: center", default=9.84, bounds=(8.0, 12.0)
     )
     sil1_fwhm = Parameter(
-        description="silicate 10um: fwhm", default=2.21, bounds=(1.0, 10.0)
+        description="silicate 10um: fwhm", default=2.21, bounds=(1.0, 3.0)
     )
     sil1_asym = Parameter(
         description="silicate 10um: asymmetry",
         default=-0.25,
+        # default=0.0,
         bounds=(-2.0, 2.0),
         fixed=True,
     )
@@ -255,25 +266,33 @@ class G25(BaseExtModel, Fittable1DModel):
     )
     sil2_fwhm = Parameter(
         description="silicate 20um: fwhm",
-        default=17.0,
-        bounds=(5.0, 20.0),
-        fixed=True,
+        default=7.0,
+        bounds=(5.0, 15.0),
+        fixed=False,
     )
     sil2_asym = Parameter(
         description="silicate 20um: asymmetry",
         default=-0.27,
+        # default=0.0,
         bounds=(-2.0, 2.0),
         fixed=True,
     )
 
-    FIR_amp = Parameter(
-        description="FIR term: amplitude", default=0.012 * AbAv, min=0.0
+    fir_amp = Parameter(
+        description="fir: amplitude", default=0.005, bounds=(0.0, 0.01), fixed=False
     )
-    FIR_lambda = Parameter(
-        description="FIR term: center wavelength", default=25.0, bounds=(20.0, 30.0)
+    fir_center = Parameter(
+        description="fir: center",
+        default=15.,
+        bounds=(4.0, 100.0),
+        fixed=False,
     )
-    FIR_b = Parameter(description="FIR term: b coefficient", default=0.00)
-    FIR_n = Parameter(description="FIR term: n coefficient", default=2.0, fixed=True)
+    fir_fwhm = Parameter(
+        description="fir: fwhm",
+        default=10.0,
+        bounds=(1.0, 100.0),
+        fixed=False,
+    )
 
     x_range = [1.0 / 1e3, 1.0 / 1e-3]
 
@@ -312,14 +331,19 @@ class G25(BaseExtModel, Fittable1DModel):
     def evaluate(
         self,
         x,
-        BKG_amp,
-        BKG_lambda,
-        BKG_b,
-        BKG_n,
-        FUV_amp,
-        FUV_lambda,
-        FUV_b,
-        FUV_n,
+        bkg_amp,
+        bkg_center,
+        bkg_fwhm,
+        # BKG_amp,
+        # BKG_lambda,
+        # BKG_b,
+        fuv_amp,
+        fuv_center,
+        fuv_fwhm,
+        #FUV_amp,
+        #FUV_lambda,
+        #FUV_b,
+        #FUV_n,
         bump_amp,
         bump_center,
         bump_fwhm,
@@ -340,10 +364,9 @@ class G25(BaseExtModel, Fittable1DModel):
         sil2_center,
         sil2_fwhm,
         sil2_asym,
-        FIR_amp,
-        FIR_lambda,
-        FIR_b,
-        FIR_n,
+        fir_amp,
+        fir_center,
+        fir_fwhm,
     ):
         """
         P92 function
@@ -369,15 +392,17 @@ class G25(BaseExtModel, Fittable1DModel):
         # calculate the terms
         lam = 1.0 / x
         axav = (
-            self._p92_single_term(lam, BKG_amp, BKG_lambda, BKG_b, BKG_n)
-            + self._p92_single_term(lam, FUV_amp, FUV_lambda, FUV_b, FUV_n)
+            +_modified_drude(lam, bkg_amp, bkg_center, bkg_fwhm, 0.0)
+            # + self._p92_single_term(lam, BKG_amp, BKG_lambda, BKG_b, 2.0)
+            # + self._p92_single_term(lam, FUV_amp, FUV_lambda, FUV_b, FUV_n)
+            + _modified_drude(lam, fuv_amp, fuv_center, fuv_fwhm, 0.0)
             + _modified_drude(x, bump_amp, bump_center, bump_fwhm, 0.0)
             + _modified_drude(x, iss1_amp, iss1_center, iss1_fwhm, 0.0)
             + _modified_drude(x, iss2_amp, iss2_center, iss2_fwhm, 0.0)
             + _modified_drude(x, iss3_amp, iss3_center, iss3_fwhm, 0.0)
             + _modified_drude(lam, sil1_amp, sil1_center, sil1_fwhm, sil1_asym)
             + _modified_drude(lam, sil2_amp, sil2_center, sil2_fwhm, sil2_asym)
-            + self._p92_single_term(lam, FIR_amp, FIR_lambda, FIR_b, FIR_n)
+            + _modified_drude(lam, fir_amp, fir_center, fir_fwhm, 0.0)
         )
 
         # return A(x)/A(V)
